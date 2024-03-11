@@ -152,7 +152,7 @@ fn main() -> Result<(), anyhow::Error> {
                                             Alignment::Right => String::from("right"),
                                         }
                                     }).reduce(|x, y| format!("{}, {}", x, y)).unwrap();
-                                    writeln!(chapter_typst, "#table(columns: {}, align: ({}), ",  columns, aligns)?;
+                                    writeln!(chapter_typst, "#table(columns: {}, align: ({}), ", columns, aligns)?;
                                 }
                                 Tag::TableHead => {
                                     event_stack.push(EventType::TableHead);
@@ -166,9 +166,16 @@ fn main() -> Result<(), anyhow::Error> {
                                     }
                                     event_stack.push(EventType::NoLN);
                                 }
-                                Tag::Emphasis => {}
-                                Tag::Strong => {}
-                                Tag::Strikethrough => {}
+                                Tag::Emphasis => {
+                                    write!(chapter_typst, "_")?;
+                                }
+                                Tag::Strong => {
+                                    write!(chapter_typst, "*")?;
+                                }
+                                Tag::Strikethrough => {
+                                    write!(chapter_typst, "#strike[")?;
+                                    event_stack.push(EventType::NoLN);
+                                }
                                 Tag::Link(_, _, _) => {}
                                 Tag::Image(_, _, _) => {}
                             }
@@ -222,15 +229,20 @@ fn main() -> Result<(), anyhow::Error> {
                                         write!(chapter_typst, "], ")?;
                                     }
                                 }
-                                Tag::Emphasis => {}
-                                Tag::Strong => {}
-                                Tag::Strikethrough => {}
+                                Tag::Emphasis => {
+                                    write!(chapter_typst, "_")?;
+                                }
+                                Tag::Strong => {
+                                    write!(chapter_typst, "*")?;
+                                }
+                                Tag::Strikethrough => {
+                                    write!(chapter_typst, "]")?;
+                                }
                                 Tag::Link(_, _, _) => {}
                                 Tag::Image(_, _, _) => {}
                             }
                         }
                         Event::Text(text) => {
-
                             let text = text.replace("#", "\\#")
                                 .replace("@", "\\@")
                                 .replace("$", "\\$")
@@ -243,14 +255,14 @@ fn main() -> Result<(), anyhow::Error> {
                                 Some(EventType::FootnoteReference(foot_note)) => {
                                     write!(chapter_typst, "{} @{} ", text, foot_note)?;
                                     event_stack.pop();
-                                },
+                                }
                                 Some(EventType::NoLN) => {
                                     write!(chapter_typst, "{}", text)?;
                                     event_stack.pop();
                                 }
                                 _ => {
                                     writeln!(chapter_typst, "{}", text)?;
-                                },
+                                }
                             }
 
                             //
