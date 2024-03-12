@@ -1,24 +1,22 @@
-use std::borrow::Cow;
-use std::collections::HashMap;
-use std::fmt::{format, Write as FmtWrite};
+use std::fmt::Write as FmtWrite;
 use std::io;
 use std::io::{Read, Write as IoWrite};
 use std::ops::Deref;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use anyhow::anyhow;
 use env_logger::Env;
-use log::info;
-use mdbook::book::Chapter;
 use mdbook::BookItem;
 use mdbook::renderer::RenderContext;
-use pulldown_cmark::{Alignment, CodeBlockKind, CowStr, Event, Options, Parser, Tag};
+use pulldown_cmark::{Alignment, CodeBlockKind, CowStr, Event, LinkType, Options, Parser, Tag};
 use serde::{Deserialize, Serialize};
+
 use crate::EventType::NoLN;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Config {
     pub section_level: u32,
+    pub document_keywords: Option<String>,
 }
 
 enum EventType<'a> {
@@ -29,6 +27,7 @@ enum EventType<'a> {
     FootnoteReference(CowStr<'a>),
     NoLN,
     TableHead,
+    Heading,
 }
 
 enum ListKind {
@@ -47,12 +46,20 @@ fn main() -> Result<(), anyhow::Error> {
     let src_path = context.root.join(context.config.book.src);
     let dest_path = context.root.join(context.config.build.build_dir);
 
-    info!("config is {:?}", config);
-
 
     let mut chapter_typst = String::new();
 
+    let title = context.config.book.title.unwrap_or("Title".to_string());
+    let authors = context.config.book.authors;
+    let document_keywords = config.document_keywords.unwrap_or("Keywords".to_string());
+
+    writeln!(chapter_typst, r#"#let document_title = "{}""#, title)?;
+    writeln!(chapter_typst, r#"#let document_authors = "{}".split(",").map(it => it.trim())"#, authors.join(","))?;
+    writeln!(chapter_typst, r#"#let document_keywords = "{}".split(",").map(it => it.trim())"#, document_keywords)?;
+
+
     let template_str = include_str!("assets/template.typ");
+
 
     chapter_typst.push_str(template_str);
 
@@ -70,11 +77,9 @@ fn main() -> Result<(), anyhow::Error> {
             BookItem::Chapter(chapter) => {
                 let chapter_path = &chapter.source_path.to_owned().ok_or(anyhow!("source_path not found"))?;
 
-
-                let chapter_path = src_path.join(chapter_path);
-
-
-                let chapter_parent_path = chapter_path.parent().ok_or(anyhow!("no parent"))?;
+                let chapter_path_str = chapter_path.to_str().ok_or(anyhow!("source_path not found"))?;
+                let chapter_path_normal_str = chapter_path_str.replace("/", "_");
+                let chapter_parent_path_str = chapter_path.parent().ok_or(anyhow!("no parent"))?.to_str().ok_or(anyhow!("source_path not found"))?;
 
                 let options = Options::ENABLE_SMART_PUNCTUATION
                     | Options::ENABLE_STRIKETHROUGH
@@ -86,16 +91,16 @@ fn main() -> Result<(), anyhow::Error> {
 
 
                 for event in parser {
-                    info!("event is {:?}", event);
                     match event {
                         Event::Start(tag) => {
                             match tag {
                                 Tag::Paragraph => {
                                     //writeln!(chapter_typst, "#par()[")?
                                 }
-                                Tag::Heading(level, _, _) => {
+                                Tag::Heading(level, fragment_id, classes) => {
                                     let level_usize: usize = level as usize;
                                     write!(chapter_typst, "{} ", "=".repeat(level_usize))?;
+                                    event_stack.push(EventType::Heading);
                                 }
                                 Tag::BlockQuote => {
                                     writeln!(chapter_typst, "#quote(block: true)[")?
@@ -176,8 +181,48 @@ fn main() -> Result<(), anyhow::Error> {
                                     write!(chapter_typst, "#strike[")?;
                                     event_stack.push(EventType::NoLN);
                                 }
-                                Tag::Link(_, _, _) => {}
-                                Tag::Image(_, _, _) => {}
+                                Tag::Link(link_type, url, title) => {
+                                    match link_type {
+                                        LinkType::Inline => {
+                                            if url.starts_with("http") || url.starts_with("https") {
+                                                write!(chapter_typst, r#"#link("{}")[{}"#, url, title)?;
+                                            }
+                                            if url.starts_with("#") {
+                                                write!(chapter_typst, r#"#link(<{}-{}>)[{}"#, chapter_path_normal_str, url.replacen("#", "", 1), title)?;
+                                            }
+                                            if url.starts_with("mailto") {
+                                                write!(chapter_typst, r#"#link("{}")[{}"#, url, title)?;
+                                            }
+                                            event_stack.push(NoLN);
+                                        }
+                                        LinkType::Reference => {}
+                                        LinkType::ReferenceUnknown => {}
+                                        LinkType::Collapsed => {}
+                                        LinkType::CollapsedUnknown => {}
+                                        LinkType::Shortcut => {}
+                                        LinkType::ShortcutUnknown => {}
+                                        LinkType::Autolink => {}
+                                        LinkType::Email => {
+                                            write!(chapter_typst, r#"#link("mailto:{}")[{}"#, url, title)?;
+                                            event_stack.push(NoLN);
+                                        }
+                                    }
+                                }
+                                Tag::Image(link_type, url, title) => {
+                                    match link_type {
+                                        LinkType::Inline => {
+                                            writeln!(chapter_typst, r#"#figure(image("../../src/{}/{}", alt: "{}"),)"#, chapter_parent_path_str, url, title)?;
+                                        }
+                                        LinkType::Reference => {}
+                                        LinkType::ReferenceUnknown => {}
+                                        LinkType::Collapsed => {}
+                                        LinkType::CollapsedUnknown => {}
+                                        LinkType::Shortcut => {}
+                                        LinkType::ShortcutUnknown => {}
+                                        LinkType::Autolink => {}
+                                        LinkType::Email => {}
+                                    }
+                                }
                             }
                         }
                         Event::End(tag) => {
@@ -188,7 +233,7 @@ fn main() -> Result<(), anyhow::Error> {
                                     writeln!(chapter_typst, "")?;
                                 }
                                 Tag::Heading(_, _, _) => {
-                                    //writeln!(chapter_typst, "]")?;
+                                    //writeln!(chapter_typst, " <{}-{}>", chapter_path.to_str().ok_or(anyhow!("path error"))?, mdbook::utils::normalize_id())?;
                                 }
                                 Tag::BlockQuote => {
                                     writeln!(chapter_typst, "]")?;
@@ -238,7 +283,23 @@ fn main() -> Result<(), anyhow::Error> {
                                 Tag::Strikethrough => {
                                     write!(chapter_typst, "]")?;
                                 }
-                                Tag::Link(_, _, _) => {}
+                                Tag::Link(link_type, url, title) => {
+                                    match link_type {
+                                        LinkType::Inline => {
+                                            writeln!(chapter_typst, "]")?
+                                        }
+                                        LinkType::Reference => {}
+                                        LinkType::ReferenceUnknown => {}
+                                        LinkType::Collapsed => {}
+                                        LinkType::CollapsedUnknown => {}
+                                        LinkType::Shortcut => {}
+                                        LinkType::ShortcutUnknown => {}
+                                        LinkType::Autolink => {}
+                                        LinkType::Email => {
+                                            writeln!(chapter_typst, "]")?
+                                        }
+                                    }
+                                }
                                 Tag::Image(_, _, _) => {}
                             }
                         }
@@ -260,6 +321,14 @@ fn main() -> Result<(), anyhow::Error> {
                                     write!(chapter_typst, "{}", text)?;
                                     event_stack.pop();
                                 }
+                                Some(EventType::Heading) => {
+                                    writeln!(chapter_typst, "{} <{}-{}>",
+                                             text,
+                                             chapter_path_normal_str,
+                                             mdbook::utils::normalize_id(text.as_str())
+                                    )?;
+                                    event_stack.pop();
+                                }
                                 _ => {
                                     writeln!(chapter_typst, "{}", text)?;
                                 }
@@ -278,8 +347,12 @@ fn main() -> Result<(), anyhow::Error> {
                             //     writeln!(chapter_typst, "{}", text)?;
                             // }
                         }
-                        Event::Code(code) => {}
-                        Event::Html(html) => {}
+                        Event::Code(code) => {
+                            write!(chapter_typst, "`{}`", code)?;
+                        }
+                        Event::Html(html) => {
+                            write!(chapter_typst, "{}", html)?;
+                        }
                         Event::FootnoteReference(foot_note) => {
                             event_stack.push(EventType::FootnoteReference(foot_note))
                         }
@@ -353,4 +426,3 @@ mod tests {
         assert_eq!(PathBuf::from(r#"C:\\Users\\xxx"#), result);
     }
 }
-
