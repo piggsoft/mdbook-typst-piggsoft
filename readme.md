@@ -2,7 +2,7 @@
 
 ## 是什么
 
-mdbook-typst-piggsoft是一个mdbook的output链，主要是讲markdown文件导出为pdf、svg、png。
+mdbook-typst-piggsoft是一个mdbook的output链，主要是将markdown文件导出为pdf、svg、png。
 
 ### 主要参考
 
