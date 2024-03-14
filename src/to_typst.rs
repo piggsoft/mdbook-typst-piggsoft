@@ -48,10 +48,12 @@ pub fn convert(context: &RenderContext, config: &Config, template_str: &str) -> 
     } else {
         "Keywords"
     };
+    let section_depth = &config.section_level;
 
     writeln!(chapter_str, r#"#let document_title = "{}""#, title)?;
     writeln!(chapter_str, r#"#let document_authors = "{}".split(",").map(it => it.trim())"#, authors.join(","))?;
     writeln!(chapter_str, r#"#let document_keywords = "{}".split(",").map(it => it.trim())"#, document_keywords)?;
+    writeln!(chapter_str, r#"#let section_depth = {}"#, section_depth)?;
 
 
     chapter_str.push_str(template_str);

@@ -4,6 +4,10 @@ use std::path::PathBuf;
 use crate::config::{Config, OutputFormat};
 
 
+fn concatenate_name_and_suffix(name: &str, suffix: &str) -> String {
+    format!("{}{}", name, suffix)
+}
+
 pub fn export(
     config: &Config,
     root_path: &PathBuf,
@@ -20,7 +24,7 @@ pub fn export(
                 .arg("--root")
                 .arg(&root_path)
                 .arg(&typst_file)
-                .arg(&out_file.join("out.pdf"));
+                .arg(&out_file.join(concatenate_name_and_suffix(&config.output_filename, ".pdf")));
             Some(c)
         }
         OutputFormat::Svg => {
@@ -32,7 +36,7 @@ pub fn export(
                 .arg("--root")
                 .arg(&root_path)
                 .arg(&typst_file)
-                .arg(&out_file.join("out-{n}.svg"));
+                .arg(&out_file.join(concatenate_name_and_suffix(&config.output_filename, "-{n}.svg")));
             Some(c)
         }
         OutputFormat::Png => {
@@ -44,9 +48,9 @@ pub fn export(
                 .arg("--root")
                 .arg(&root_path)
                 .arg(&typst_file)
-                .arg(&out_file.join("out-{n}.png"));
+                .arg(&out_file.join(concatenate_name_and_suffix(&config.output_filename, "-{n}.png")));
             Some(c)
-        }
+        },
     };
 
     if let Some(mut c) = command {

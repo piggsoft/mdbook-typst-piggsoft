@@ -55,5 +55,5 @@
 ])
 #pagebreak()
 
-#outline(depth: 4, /*indent: 2em*/)
+#outline(depth: section_depth, /*indent: 2em*/)
 #pagebreak()
