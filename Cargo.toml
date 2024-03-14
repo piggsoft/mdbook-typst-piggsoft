@@ -5,7 +5,12 @@ authors = [
     "Alex Chen <piggsoft@163.com>"
 ]
 edition = "2021"
-repository = "https://www.github.com/piggsoft/mdbook-typst-piggsoft"
+description = "一个mdbook的output链，依靠typst将markdown文件导出为pdf、svg、png。"
+license = "Apache-2.0"
+readme = "readme.md"
+homepage = "https://github.com/piggsoft/mdbook-typst-piggsoft"
+repository = "https://github.com/piggsoft/mdbook-typst-piggsoft"
+categories = ["command-line-utilities"]
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

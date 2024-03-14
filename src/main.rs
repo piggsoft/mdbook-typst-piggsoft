@@ -5,8 +5,11 @@ use std::path::PathBuf;
 
 use mdbook::renderer::RenderContext;
 
-use mdbook_typst_piggsoft::{export, to_typst};
-use mdbook_typst_piggsoft::config::Config;
+mod to_typst;
+mod config;
+mod export;
+
+use config::Config;
 
 const TYPST_FILE_SUFFIX: &'static str = ".typ";
 
