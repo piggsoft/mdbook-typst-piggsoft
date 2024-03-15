@@ -1,15 +1,15 @@
+use std::{fs, io};
 use std::fs::File;
-use std::io;
 use std::io::{Read, Write as IoWrite};
 use std::path::PathBuf;
 
 use mdbook::renderer::RenderContext;
 
+use config::Config;
+
 mod to_typst;
 mod config;
 mod export;
-
-use config::Config;
 
 const TYPST_FILE_SUFFIX: &'static str = ".typ";
 
@@ -41,18 +41,21 @@ fn main() -> Result<(), anyhow::Error> {
 
     let file_name = format!("{}{}", &config.output_filename, TYPST_FILE_SUFFIX);
 
-    let dest_typst_path = dest_path.join(&config.output_dir).join(file_name);
+    let dest_typst_path = dest_path.join(&config.output_dir);
 
-    // if !dest_path.exists() {
-    //     std::fs::File::create(dest_path)?;
-    // }
+    let dest_typst_file = dest_typst_path.join(file_name);
 
-    let mut file = File::create(&dest_typst_path)?;
+
+    if !dest_typst_path.exists() {
+        fs::create_dir_all(&dest_typst_path)?
+    }
+
+    let mut file = File::create(&dest_typst_file)?;
 
     let _ = &file.write_all(chapter_str.as_bytes())?;
     file.flush()?;
 
-    export::export(&config, &context.root, &dest_typst_path, &dest_path.join(&config.output_dir));
+    export::export(&config, &context.root, &dest_typst_file, &dest_path.join(&config.output_dir));
 
     Ok(())
 }
