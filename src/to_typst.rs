@@ -71,7 +71,7 @@ pub fn convert(context: &RenderContext, config: &Config, template_str: &str) -> 
                 let chapter_path = &chapter.source_path.to_owned().ok_or(anyhow!("source_path not found"))?;
 
                 let chapter_path_str = chapter_path.to_str().ok_or(anyhow!("source_path not found"))?;
-                let chapter_path_normal_str = chapter_path_str.replace("/", "_");
+                let chapter_path_normal_str = chapter_path_str.replace("/", "_").replace(" ","_");
                 let chapter_parent_path_str = chapter_path.parent().ok_or(anyhow!("no parent"))?.to_str().ok_or(anyhow!("source_path not found"))?;
 
                 let options = Options::ENABLE_SMART_PUNCTUATION
@@ -193,22 +193,25 @@ pub fn convert(context: &RenderContext, config: &Config, template_str: &str) -> 
                                 LinkType::Inline => {
                                     if url.starts_with("http") || url.starts_with("https") {
                                         write!(chapter_str, r#"#link("{}")[{}"#, url, alt)?;
-                                    }
-                                    if url.starts_with("#") {
+                                    }else if url.starts_with("#") {
                                         write!(chapter_str, r#"#link(<{}-{}>)[{}"#, chapter_path_normal_str, url.replacen("#", "", 1), alt)?;
-                                    }
-                                    if url.starts_with("mailto") {
+                                    } else if url.starts_with("mailto") {
+                                        write!(chapter_str, r#"#link("{}")[{}"#, url, alt)?;
+                                    } else {
                                         write!(chapter_str, r#"#link("{}")[{}"#, url, alt)?;
                                     }
                                     event_stack.push(TextNoNewLine);
                                 }
-                                LinkType::Reference => {}
+                                LinkType::Reference => {
+                                }
                                 LinkType::ReferenceUnknown => {}
                                 LinkType::Collapsed => {}
                                 LinkType::CollapsedUnknown => {}
                                 LinkType::Shortcut => {}
                                 LinkType::ShortcutUnknown => {}
-                                LinkType::Autolink => {}
+                                LinkType::Autolink => {
+                                    write!(chapter_str, r#"#link("{}")[{}"#, url, alt)?;
+                                }
                                 LinkType::Email => {
                                     write!(chapter_str, r#"#link("mailto:{}")[{}"#, url, alt)?;
                                     event_stack.push(TextNoNewLine);
@@ -217,19 +220,9 @@ pub fn convert(context: &RenderContext, config: &Config, template_str: &str) -> 
                         }
                         Event::End(Tag::Link(link_type, _, _)) => {
                             match link_type {
-                                LinkType::Inline => {
-                                    writeln!(chapter_str, "]")?
-                                }
-                                LinkType::Reference => {}
-                                LinkType::ReferenceUnknown => {}
-                                LinkType::Collapsed => {}
-                                LinkType::CollapsedUnknown => {}
-                                LinkType::Shortcut => {}
-                                LinkType::ShortcutUnknown => {}
-                                LinkType::Autolink => {}
-                                LinkType::Email => {
-                                    writeln!(chapter_str, "]")?
-                                }
+                               _ => {
+                                   writeln!(chapter_str, "]")?
+                               }
                             }
                         }
                         Event::Start(Tag::Image(link_type, url, alt)) => {
@@ -286,6 +279,7 @@ pub fn convert(context: &RenderContext, config: &Config, template_str: &str) -> 
             BookItem::Separator => {}
             BookItem::PartTitle(_) => {}
         }
+        writeln!(chapter_str)?;
         writeln!(chapter_str, "#pagebreak()")?;
     }
 
