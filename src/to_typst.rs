@@ -133,12 +133,12 @@ pub fn convert(context: &RenderContext, config: &Config, template_str: &str) -> 
                             event_stack.pop();
                             if let Some(EventType::List { level, kind }) = event_stack.last() {
                                 if let ListKind::Numbered = kind {
-                                    write!(chapter_str, "{}+ {}", " ".repeat(*level), &content)?;
+                                    writeln!(chapter_str, "{}+ {}", " ".repeat(*level), &content)?;
                                 } else {
-                                    write!(chapter_str, "{}- {}", " ".repeat(*level), &content)?;
+                                    writeln!(chapter_str, "{}- {}", " ".repeat(*level), &content)?;
                                 }
                             } else {
-                                write!(chapter_str, "- {}", &content)?;
+                                writeln!(chapter_str, "- {}", &content)?;
                             }
                         }
                         Event::End(Tag::List(_)) => { event_stack.pop(); }
