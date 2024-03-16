@@ -35,6 +35,8 @@ fn map_reduce_table_aligns(aligns: &Vec<Alignment>) -> String {
 }
 
 pub fn convert(context: &RenderContext, config: &Config, template_str: &str) -> Result<String, anyhow::Error> {
+    let src_str = context.config.book.src.to_str().ok_or(anyhow!("src not found"))?;
+
     let mut chapter_str = String::new();
     let title = if let Some(title) = &context.config.book.title {
         title
@@ -71,8 +73,9 @@ pub fn convert(context: &RenderContext, config: &Config, template_str: &str) -> 
                 let chapter_path = &chapter.source_path.to_owned().ok_or(anyhow!("source_path not found"))?;
 
                 let chapter_path_str = chapter_path.to_str().ok_or(anyhow!("source_path not found"))?;
-                let chapter_path_normal_str = chapter_path_str.replace("/", "_").replace(" ","_");
+                let chapter_path_normal_str = chapter_path_str.replace("/", "_").replace(" ", "_");
                 let chapter_parent_path_str = chapter_path.parent().ok_or(anyhow!("no parent"))?.to_str().ok_or(anyhow!("source_path not found"))?;
+
 
                 let options = Options::ENABLE_SMART_PUNCTUATION
                     | Options::ENABLE_STRIKETHROUGH
@@ -193,7 +196,7 @@ pub fn convert(context: &RenderContext, config: &Config, template_str: &str) -> 
                                 LinkType::Inline => {
                                     if url.starts_with("http") || url.starts_with("https") {
                                         write!(chapter_str, r#"#link("{}")[{}"#, url, alt)?;
-                                    }else if url.starts_with("#") {
+                                    } else if url.starts_with("#") {
                                         write!(chapter_str, r#"#link(<{}-{}>)[{}"#, chapter_path_normal_str, url.replacen("#", "", 1), alt)?;
                                     } else if url.starts_with("mailto") {
                                         write!(chapter_str, r#"#link("{}")[{}"#, url, alt)?;
@@ -202,8 +205,7 @@ pub fn convert(context: &RenderContext, config: &Config, template_str: &str) -> 
                                     }
                                     event_stack.push(TextNoNewLine);
                                 }
-                                LinkType::Reference => {
-                                }
+                                LinkType::Reference => {}
                                 LinkType::ReferenceUnknown => {}
                                 LinkType::Collapsed => {}
                                 LinkType::CollapsedUnknown => {}
@@ -220,18 +222,18 @@ pub fn convert(context: &RenderContext, config: &Config, template_str: &str) -> 
                         }
                         Event::End(Tag::Link(link_type, _, _)) => {
                             match link_type {
-                               _ => {
-                                   writeln!(chapter_str, "]")?
-                               }
+                                _ => {
+                                    writeln!(chapter_str, "]")?
+                                }
                             }
                         }
                         Event::Start(Tag::Image(link_type, url, alt)) => {
                             match link_type {
                                 LinkType::Inline => {
                                     if "" == chapter_parent_path_str {
-                                        write!(chapter_str, r#"#figure(image("/src/{}", alt: "{}"), caption:["#, url, alt)?;
+                                        write!(chapter_str, r#"#figure(image("/{}/{}", alt: "{}"), caption:["#, &src_str, url, alt)?;
                                     } else {
-                                        write!(chapter_str, r#"#figure(image("/src/{}/{}", alt: "{}"), caption:["#, chapter_parent_path_str, url, alt)?;
+                                        write!(chapter_str, r#"#figure(image("/{}/{}/{}", alt: "{}"), caption:["#, &src_str, chapter_parent_path_str, url, alt)?;
                                     }
                                     event_stack.push(TextNoNewLine);
                                 }
