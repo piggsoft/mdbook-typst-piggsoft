@@ -12,7 +12,6 @@ use crate::config::Config;
 enum EventType {
     ///  u32 is list level, none is first level
     List { level: usize, kind: ListKind },
-    ///  u32 is list level, none is first level
     TableHead,
     TextNoNewLine,
     TextPostProcess,

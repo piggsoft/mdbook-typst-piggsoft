@@ -17,7 +17,7 @@ pub fn export(
     let command = match config.output_format {
         OutputFormat::Pdf => {
             let mut c = std::process::Command::new("typst");
-            c.arg("-v")
+            c/*.arg("-v")*/
                 .arg("compile")
                 .arg("--format")
                 .arg("pdf")
@@ -29,7 +29,7 @@ pub fn export(
         }
         OutputFormat::Svg => {
             let mut c = std::process::Command::new("typst");
-            c.arg("-v")
+            c/*.arg("-v")*/
                 .arg("compile")
                 .arg("--format")
                 .arg("svg")
@@ -41,7 +41,7 @@ pub fn export(
         }
         OutputFormat::Png => {
             let mut c = std::process::Command::new("typst");
-            c.arg("-v")
+            c/*.arg("-v")*/
                 .arg("compile")
                 .arg("--format")
                 .arg("png")
